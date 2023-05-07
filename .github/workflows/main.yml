@@ -1,9 +1,10 @@
 name: Azure Web App deployment
 
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch
+  # push:
+  #   branches:
+  #     - main
 
 jobs:
   build_and_deploy_job:
@@ -13,10 +14,17 @@ jobs:
       - uses: actions/checkout@v3
         with:
           submodules: true
+      - uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
       - uses: actions/setup-node@v3
         with:
           node-version: 18.x
       - run: |
           npm install
           npm run build
-      
+      - uses: azure/webapps-deploy@v2
+        with:
+          app-name: adas-app-next13test
+          package: 
+      - run: az logout
