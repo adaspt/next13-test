@@ -1,30 +1,56 @@
-name: Azure Web App deployment
+name: Build and deploy
 
 on:
-  workflow_dispatch
-  # push:
-  #   branches:
-  #     - main
+  push:
+    branches:
+      - main
+  workflow_dispatch:
 
 jobs:
-  build_and_deploy_job:
+  build:
     runs-on: ubuntu-latest
-    name: Build and Deploy Job
+
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v2
+
+      - name: Set up Node.js version
+        uses: actions/setup-node@v1
         with:
-          submodules: true
-      - uses: azure/login@v1
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
-      - uses: actions/setup-node@v3
-        with:
-          node-version: 18.x
-      - run: |
+          node-version: '18.x'
+
+      - name: npm install, build, and test
+        run: |
           npm install
-          npm run build
-      - uses: azure/webapps-deploy@v2
+          npm run build --if-present
+          npm run test --if-present
+
+      - name: Zip all files for upload between jobs
+        run: zip next.zip ./* .next -qr
+
+      - name: Upload artifact for deployment job
+        uses: actions/upload-artifact@v2
         with:
-          app-name: adas-app-next13test
-          package: 
-      - run: az logout
+          name: node-app
+          path: next.zip
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    environment:
+      name: 'Production'
+      url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
+
+    steps:
+      - name: Download artifact from build job
+        uses: actions/download-artifact@v2
+        with:
+          name: node-app
+
+      - name: 'Deploy to Azure Web App'
+        id: deploy-to-webapp
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: 'adas-app-next13test'
+          slot-name: 'Production'
+          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_8C74352532A54CBC8431376147158598 }}
+          package: next.zip
