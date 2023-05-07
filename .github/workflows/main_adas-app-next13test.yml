@@ -28,7 +28,7 @@ jobs:
           npm run test --if-present
 
       - name: Zip all files for upload between jobs
-            run: zip next.zip ./* .next -qr
+        run: zip next.zip ./* .next -qr
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v2
